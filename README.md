@@ -196,3 +196,10 @@ Serializes the package to a file.
 [anki-template-docs]: https://apps.ankiweb.net/docs/manual.html#cards-and-templates
 [anki-cloze-docs]: https://apps.ankiweb.net/docs/manual.html#cloze-deletion
 [anki-cloze-template-docs]: https://apps.ankiweb.net/docs/manual.html#cloze-templates
+
+## License
+
+mkanki is licensed to everyone under the terms of the [GNU Affero General
+Public License v3](https://opensource.org/licenses/AGPL-3.0). If you'd like to
+use mkanki under different terms, I'm happy to accommodate you—just [email
+me](mailto:nornagon@nornagon.net)!
