@@ -11,6 +11,9 @@ class Model {
   }
 
   note(fields) {
+    if (fields.length !== this.props.flds.length) {
+      throw new Error(`Expected ${this.props.flds.length} fields for model '${this.props.name}' but got ${fields.length}`)
+    }
     return new Note(this, fields)
   }
 }
@@ -52,6 +55,7 @@ class Note {
       }
       return rv
     } else {
+      // the below logic is copied from anki's ModelManager._availClozeOrds
       const ords = new Set()
       const matches = []
       const curliesRe = /{{[^}]*?cloze:(?:[^}]?:)*(.+?)}}/g
