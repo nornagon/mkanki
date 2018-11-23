@@ -1,8 +1,9 @@
-const crypto = require('crypto')
 const tmp = require('tmp')
 const sqlite = require('sqlite3')
 const fs = require('fs')
 const archiver = require('archiver')
+
+const ankiHash = require('./anki_hash')
 
 class Model {
   constructor(props) {
@@ -14,109 +15,6 @@ class Model {
   }
 }
 
-  /*
-new Model({
-  name: "Basic",
-  id: "1542906796044",
-  tags: [],
-  type: 0,
-  "did": 1,
-  flds: [
-    {
-      size: 20,
-      name: "Front",
-      media: [],
-      rtl: false,
-      ord: 0,
-      font: "Arial",
-      sticky: false
-    },
-    {
-      size: 20,
-      name: "Back",
-      media: [],
-      rtl: false,
-      ord: 1,
-      font: "Arial",
-      sticky: false
-    }
-  ],
-  "req": [
-    [
-      0,
-      "all",
-      [ 0 ]
-    ]
-  ],
-  "sortf": 0,
-  "tmpls": [
-    {
-      "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
-      "name": "Card 1",
-      "qfmt": "{{Front}}",
-      "did": null,
-      "ord": 0,
-      "bafmt": "",
-      "bqfmt": ""
-    }
-  ],
-  "css": ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n",
-
-  "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-  "latexPost": "\\end{document}",
-  "mod": 1542906796,
-  "vers": [],
-  "usn": -1,
-})
-
-new Model({
-  name: "Cloze",
-  id: "1542906796040",
-  type: 1,
-  tags: [],
-  "did": 1,
-  flds: [
-    {
-      size: 20,
-      name: "Text",
-      media: [],
-      rtl: false,
-      ord: 0,
-      font: "Arial",
-      sticky: false
-    },
-    {
-      size: 20,
-      name: "Extra",
-      media: [],
-      rtl: false,
-      ord: 1,
-      font: "Arial",
-      sticky: false
-    }
-  ],
-  sortf: 0,
-  tmpls: [
-    {
-      "afmt": "{{cloze:Text}}<br>\n{{Extra}}",
-      "name": "Cloze",
-      "qfmt": "{{cloze:Text}}",
-      "did": null,
-      "ord": 0,
-      "bafmt": "",
-      "bqfmt": ""
-    }
-  ],
-  "css": ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n\n.cloze {\n font-weight: bold;\n color: blue;\n}",
-
-  "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-  "latexPost": "\\end{document}",
-  "mod": 1542906796
-  "vers": [],
-  "usn": -1,
-})
-*/
-
 class Deck {
   constructor(id, name) {
     this.id = id
@@ -127,56 +25,8 @@ class Deck {
   addNote(note) {
     this.notes.push(note)
   }
-
-  toJSON() {
-    return {
-      name: this.name,
-      "extendRev": 50,
-      "usn": -1,
-      "collapsed": false,
-      "newToday": [0, 0],
-      "timeToday": [0, 0],
-      "dyn": 0,
-      "extendNew": 10,
-      "conf": 1,
-      "revToday": [0, 0],
-      "lrnToday": [0, 0],
-      "id": this.id,
-      "mod": (+new Date/1000)|0,
-      "desc": ""
-    }
-  }
 }
 
-
-BASE91_TABLE = [
-  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-  't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4',
-  '5', '6', '7', '8', '9', '!', '#', '$', '%', '&', '(', ')', '*', '+', ',', '-', '.', '/', ':',
-  ';', '<', '=', '>', '?', '@', '[', ']', '^', '_', '`', '{', '|', '}', '~']
-
-function ankiHash(fields) {
-  const str = fields.join('__')
-  const h = crypto.createHash('sha256')
-  h.update(str)
-  const hex = h.digest()
-
-  let hash_int = 0n
-  for (let i = 0; i < 8; i++) {
-    hash_int *= 256n
-    hash_int += BigInt(hex[i])
-  }
-
-  // convert to the weird base91 format that Anki uses
-  let rv_reversed = []
-  while (hash_int > 0) {
-    rv_reversed.push(BASE91_TABLE[hash_int % 91n])
-    hash_int = (hash_int / 91n)
-  }
-
-  return rv_reversed.reverse().join('')
-}
 
 class Note {
   constructor(model, fields) {
