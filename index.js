@@ -14,9 +14,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+const fs = require('fs')
+
 const tmp = require('tmp')
 const sqlite = require('sqlite3')
-const fs = require('fs')
 const archiver = require('archiver')
 
 const ankiHash = require('./anki_hash')
