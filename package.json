@@ -9,6 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "sqlite3": "^4.0.4"
+    "archiver": "^3.0.0",
+    "better-sqlite3": "^5.0.1",
+    "sqlite3": "^4.0.4",
+    "tmp": "0.0.33"
   }
 }
