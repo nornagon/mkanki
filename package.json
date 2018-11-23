@@ -1,12 +1,14 @@
 {
   "name": "mkanki",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Generate Anki decks. Supports cloze deletion and media.",
   "main": "index.js",
   "scripts": {},
   "author": "Jeremy Apthorp <nornagon@nornagon.net>",
   "license": "AGPL-3.0-only",
   "license-comment": "I'm happy to grant licenses under other terms on a case-by-case basis, just email me!",
+  "repository": "github:nornagon/mkanki",
+  "homepage": "https://github.com/nornagon/mkanki",
   "dependencies": {
     "archiver": "^3.0.0",
     "better-sqlite3": "^5.0.1",
