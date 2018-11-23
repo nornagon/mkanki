@@ -5,6 +5,9 @@ const archiver = require('archiver')
 
 const ankiHash = require('./anki_hash')
 
+const MODEL_STD = 0
+const MODEL_CLOZE = 1
+
 class Model {
   constructor(props) {
     this.props = {
@@ -21,6 +24,58 @@ class Model {
     }
     return new Note(this, fields)
   }
+}
+
+const defaultModel = {
+  sortf: 0, // sort field
+  did: 1, // deck id
+  latexPre: `\\documentclass[12pt]{article}
+\\special{papersize=3in,5in}
+\\usepackage[utf8]{inputenc}
+\\usepackage{amssymb,amsmath}
+\\pagestyle{empty}
+\\setlength{\\parindent}{0in}
+\\begin{document}`,
+  latexPost: "\\end{document}",
+  mod: 0, // modification time
+  usn: 0, // unsure, something to do with sync?
+  vers: [], // seems to be unused
+  type: MODEL_STD,
+  css: `.card {
+ font-family: arial;
+ font-size: 20px;
+ text-align: center;
+ color: black;
+ background-color: white;
+}`,
+  /* also:
+  name: string,
+  flds: [Field],
+  tmpls: [Template],
+  tags: [??],
+  id: string
+  */
+  tags: [],
+}
+
+const defaultField = {
+  name: "",
+  ord: null,
+  sticky: false,
+  rtl: false,
+  font: "Arial",
+  size: 20,
+  media: [],
+}
+
+const defaultTemplate = {
+  name: "",
+  ord: null,
+  qfmt: "",
+  afmt: "",
+  did: null,
+  bqfmt: "",
+  bafmt: "",
 }
 
 class Deck {
@@ -100,124 +155,6 @@ class Card {
   }
 }
 
-const schema = `
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
-
-/* there's only one |col| row in the db. */
-CREATE TABLE col (
-    id              integer primary key,
-    crt             integer not null, /* creation time (seconds since epoch) */
-    mod             integer not null, /* modification time (millis since epoch) */
-    scm             integer not null, /* schema modified (millis since epoch) */
-    ver             integer not null, /* Anki schema version, 11 at time of writing */
-    dty             integer not null, /* no longer used */
-    usn             integer not null, /* not sure, looks like it has something to do with sync? 0 in new deck. */
-    ls              integer not null, /* last sync (millis since epoch) */
-    conf            text not null, /* json, see defaultConf */
-    models          text not null, /* json, in form { [modelId]: Model }. see defaultModel. */
-    decks           text not null,
-    dconf           text not null, /* { [deckId]: DeckConf } */
-    tags            text not null  /* { [tagName]: usn } */
-);
-
-CREATE TABLE notes (
-    id              integer primary key,   /* 0 */
-    guid            text not null,         /* 1 */
-    mid             integer not null,      /* 2 */  /* model id */
-    mod             integer not null,      /* 3 */  /* modification time, (seconds since epoch) */
-    usn             integer not null,      /* 4 */
-    tags            text not null,         /* 5 */  /* space-separated string */
-    flds            text not null,         /* 6 */  /* \\x1f-separated field strings */
-    sfld            integer not null,      /* 7 */  /* unsure, something to do with sorting? */
-    csum            integer not null,      /* 8 */  /* checksum, can be ignored according to genanki */
-    flags           integer not null,      /* 9 */  /* unsure, can be 0 though */
-    data            text not null          /* 10 */  /* unsure, genanki forces it to '' */
-);
-CREATE TABLE cards (
-    id              integer primary key,   /* 0 */
-    nid             integer not null,      /* 1 */  /* note id */
-    did             integer not null,      /* 2 */  /* deck id */
-    ord             integer not null,      /* 3 */  /* order */
-    mod             integer not null,      /* 4 */  /* modification time (seconds since epoch) */
-    usn             integer not null,      /* 5 */
-    type            integer not null,      /* 6 */  /* 0=new, 1=learning, 2=due */
-    queue           integer not null,      /* 7 */  /* -1 if self.suspend else 0 */
-    due             integer not null,      /* 8 */  /* 0 */
-    ivl             integer not null,      /* 9 */  /* 0 */
-    factor          integer not null,      /* 10 */  /* 0 */
-    reps            integer not null,      /* 11 */  /* 0 */
-    lapses          integer not null,      /* 12 */  /* 0 */
-    left            integer not null,      /* 13 */  /* 0 */
-    odue            integer not null,      /* 14 */  /* 0 */
-    odid            integer not null,      /* 15 */  /* 0 */
-    flags           integer not null,      /* 16 */  /* 0 */
-    data            text not null          /* 17 */  /* "" */
-);
-
-/* following 2 tables aren't used by genanki; are they needed? */
-CREATE TABLE revlog (
-    id              integer primary key,
-    cid             integer not null,
-    usn             integer not null,
-    ease            integer not null,
-    ivl             integer not null,
-    lastIvl         integer not null,
-    factor          integer not null,
-    time            integer not null,
-    type            integer not null
-);
-CREATE TABLE graves (
-    usn             integer not null,
-    oid             integer not null,
-    type            integer not null
-);
-ANALYZE sqlite_master;
-CREATE INDEX ix_notes_usn on notes (usn);
-CREATE INDEX ix_cards_usn on cards (usn);
-CREATE INDEX ix_revlog_usn on revlog (usn);
-CREATE INDEX ix_cards_nid on cards (nid);
-CREATE INDEX ix_cards_sched on cards (did, queue, due);
-CREATE INDEX ix_revlog_cid on revlog (cid);
-CREATE INDEX ix_notes_csum on notes (csum);
-COMMIT;
-`
-
-const MODEL_STD = 0
-const MODEL_CLOZE = 1
-
-const defaultModel = {
-  sortf: 0, // sort field
-  did: 1, // deck id
-  latexPre: `\\documentclass[12pt]{article}
-\\special{papersize=3in,5in}
-\\usepackage[utf8]{inputenc}
-\\usepackage{amssymb,amsmath}
-\\pagestyle{empty}
-\\setlength{\\parindent}{0in}
-\\begin{document}`,
-  latexPost: "\\end{document}",
-  mod: 0, // modification time
-  usn: 0, // unsure, something to do with sync?
-  vers: [], // seems to be unused
-  type: MODEL_STD,
-  css: `.card {
- font-family: arial;
- font-size: 20px;
- text-align: center;
- color: black;
- background-color: white;
-}`,
-  /* also:
-  name: string,
-  flds: [Field],
-  tmpls: [Template],
-  tags: [??],
-  id: string
-  */
-  tags: [],
-}
-
 // whether new cards should be mixed with reviews, or shown first or last
 const NEW_CARDS_DISTRIBUTE = 0
 const NEW_CARDS_LAST = 1
@@ -285,26 +222,6 @@ const defaultDeckConf = {
   'replayq': true,
   'mod': 0,
   'usn': 0,
-}
-
-const defaultField = {
-  name: "",
-  ord: null,
-  sticky: false,
-  rtl: false,
-  font: "Arial",
-  size: 20,
-  media: [],
-}
-
-const defaultTemplate = {
-  name: "",
-  ord: null,
-  qfmt: "",
-  afmt: "",
-  did: null,
-  bqfmt: "",
-  bafmt: "",
 }
 
 const defaultDeck = {
@@ -433,3 +350,85 @@ module.exports = {
   Package,
   Deck
 }
+
+// dumped from an anki export with the sqlite3 cli's '.schema' command
+const schema = `
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+
+/* there's only one |col| row in the db. */
+CREATE TABLE col (
+    id              integer primary key,
+    crt             integer not null, /* creation time (seconds since epoch) */
+    mod             integer not null, /* modification time (millis since epoch) */
+    scm             integer not null, /* schema modified (millis since epoch) */
+    ver             integer not null, /* Anki schema version, 11 at time of writing */
+    dty             integer not null, /* no longer used */
+    usn             integer not null, /* not sure, looks like it has something to do with sync? 0 in new deck. */
+    ls              integer not null, /* last sync (millis since epoch) */
+    conf            text not null, /* json, see defaultConf */
+    models          text not null, /* json, in form { [modelId]: Model }. see defaultModel. */
+    decks           text not null,
+    dconf           text not null, /* { [deckId]: DeckConf } */
+    tags            text not null  /* { [tagName]: usn } */
+);
+
+CREATE TABLE notes (
+    id              integer primary key,   /* 0 */
+    guid            text not null,         /* 1 */
+    mid             integer not null,      /* 2 */  /* model id */
+    mod             integer not null,      /* 3 */  /* modification time, (seconds since epoch) */
+    usn             integer not null,      /* 4 */
+    tags            text not null,         /* 5 */  /* space-separated string */
+    flds            text not null,         /* 6 */  /* \\x1f-separated field strings */
+    sfld            integer not null,      /* 7 */  /* unsure, something to do with sorting? */
+    csum            integer not null,      /* 8 */  /* checksum, can be ignored according to genanki */
+    flags           integer not null,      /* 9 */  /* unsure, can be 0 though */
+    data            text not null          /* 10 */  /* unsure, genanki forces it to '' */
+);
+CREATE TABLE cards (
+    id              integer primary key,   /* 0 */
+    nid             integer not null,      /* 1 */  /* note id */
+    did             integer not null,      /* 2 */  /* deck id */
+    ord             integer not null,      /* 3 */  /* order */
+    mod             integer not null,      /* 4 */  /* modification time (seconds since epoch) */
+    usn             integer not null,      /* 5 */
+    type            integer not null,      /* 6 */  /* 0=new, 1=learning, 2=due */
+    queue           integer not null,      /* 7 */  /* -1 if self.suspend else 0 */
+    due             integer not null,      /* 8 */  /* 0 */
+    ivl             integer not null,      /* 9 */  /* 0 */
+    factor          integer not null,      /* 10 */  /* 0 */
+    reps            integer not null,      /* 11 */  /* 0 */
+    lapses          integer not null,      /* 12 */  /* 0 */
+    left            integer not null,      /* 13 */  /* 0 */
+    odue            integer not null,      /* 14 */  /* 0 */
+    odid            integer not null,      /* 15 */  /* 0 */
+    flags           integer not null,      /* 16 */  /* 0 */
+    data            text not null          /* 17 */  /* "" */
+);
+CREATE TABLE revlog (
+    id              integer primary key,
+    cid             integer not null,
+    usn             integer not null,
+    ease            integer not null,
+    ivl             integer not null,
+    lastIvl         integer not null,
+    factor          integer not null,
+    time            integer not null,
+    type            integer not null
+);
+CREATE TABLE graves (
+    usn             integer not null,
+    oid             integer not null,
+    type            integer not null
+);
+ANALYZE sqlite_master;
+CREATE INDEX ix_notes_usn on notes (usn);
+CREATE INDEX ix_cards_usn on cards (usn);
+CREATE INDEX ix_revlog_usn on revlog (usn);
+CREATE INDEX ix_cards_nid on cards (nid);
+CREATE INDEX ix_cards_sched on cards (did, queue, due);
+CREATE INDEX ix_revlog_cid on revlog (cid);
+CREATE INDEX ix_notes_csum on notes (csum);
+COMMIT;
+`
