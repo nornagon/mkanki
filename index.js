@@ -7,7 +7,12 @@ const ankiHash = require('./anki_hash')
 
 class Model {
   constructor(props) {
-    this.props = props
+    this.props = {
+      ...defaultModel,
+      ...props,
+      flds: props.flds.map((f, i) => ({...defaultField, ord: i, ...f})),
+      tmpls: props.tmpls.map((t, i) => ({...defaultTemplate, ord: i, ...t})),
+    }
   }
 
   note(fields) {
@@ -182,8 +187,8 @@ const MODEL_STD = 0
 const MODEL_CLOZE = 1
 
 const defaultModel = {
-  sortf: 0,
-  did: 1,
+  sortf: 0, // sort field
+  did: 1, // deck id
   latexPre: `\\documentclass[12pt]{article}
 \\special{papersize=3in,5in}
 \\usepackage[utf8]{inputenc}
@@ -192,9 +197,9 @@ const defaultModel = {
 \\setlength{\\parindent}{0in}
 \\begin{document}`,
   latexPost: "\\end{document}",
-  mod: 0,
-  usn: 0,
-  vers: [],
+  mod: 0, // modification time
+  usn: 0, // unsure, something to do with sync?
+  vers: [], // seems to be unused
   type: MODEL_STD,
   css: `.card {
  font-family: arial;
@@ -202,7 +207,7 @@ const defaultModel = {
  text-align: center;
  color: black;
  background-color: white;
-}`
+}`,
   /* also:
   name: string,
   flds: [Field],
@@ -210,6 +215,7 @@ const defaultModel = {
   tags: [??],
   id: string
   */
+  tags: [],
 }
 
 // whether new cards should be mixed with reviews, or shown first or last
