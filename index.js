@@ -325,10 +325,19 @@ const defaultDeck = {
 class Package {
   constructor() {
     this.decks = []
+    this.media = []
   }
 
   addDeck(deck) {
     this.decks.push(deck)
+  }
+
+  addMedia(data, name) {
+    this.media.push({name, data})
+  }
+
+  addMediaFile(filename, name = null) {
+    this.media.push({name: name || filename, filename})
   }
 
   writeToFile(filename) {
@@ -340,7 +349,13 @@ class Package {
     const archive = archiver('zip')
     archive.pipe(out)
     archive.file(name, { name: 'collection.anki2' })
-    archive.append('{}', { name: 'media' })
+    const media_info = {}
+    this.media.forEach((m, i) => {
+      if (m.filename != null) archive.file(m.filename, { name: i.toString() })
+      else archive.append(m.data, { name: i.toString() })
+      media_info[i] = m.name
+    })
+    archive.append(JSON.stringify(media_info), { name: 'media' })
     archive.finalize()
   }
 
