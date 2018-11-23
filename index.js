@@ -39,17 +39,49 @@ class Note {
   }
 
   get cards() {
-    const isEmpty = f => {
-      return !f || f.toString().trim().length === 0
-    }
-    const rv = []
-    for (const [card_ord, any_or_all, required_field_ords] of this.model.props.req) {
-      const op = any_or_all === "any" ? "some" : "every"
-      if (required_field_ords[op](f => !isEmpty(this.fields[f]))) {
-        rv.push(card_ord)
+    if (this.model.props.type === MODEL_STD) {
+      const isEmpty = f => {
+        return !f || f.toString().trim().length === 0
       }
+      const rv = []
+      for (const [card_ord, any_or_all, required_field_ords] of this.model.props.req) {
+        const op = any_or_all === "any" ? "some" : "every"
+        if (required_field_ords[op](f => !isEmpty(this.fields[f]))) {
+          rv.push(card_ord)
+        }
+      }
+      return rv
+    } else {
+      const ords = new Set()
+      const matches = []
+      const curliesRe = /{{[^}]*?cloze:(?:[^}]?:)*(.+?)}}/g
+      const percentRe = /<%cloze:(.+?)%>/g
+      const {qfmt} = this.model.props.tmpls[0] // cloze models only have 1 template
+      let m;
+      while (m = curliesRe.exec(qfmt))
+        matches.push(m[1])
+      while (m = percentRe.exec(qfmt))
+        matches.push(m[1])
+      const map = {}
+      this.model.props.flds.forEach((fld, i) => {
+        map[fld.name] = [i, fld]
+      })
+      for (const fname of matches) {
+        if (!(fname in map)) continue
+        const ord = map[fname][0]
+        const re = /{{c(\d+)::.+?}}/gs
+        while (m = re.exec(this.fields[ord])) {
+          const i = parseInt(m[1])
+          if (i > 0)
+            ords.add(i - 1)
+        }
+      }
+      if (ords.size === 0) {
+        // empty clozes use first ord
+        return [0]
+      }
+      return Array.from(ords)
     }
-    return rv
   }
 }
 
@@ -100,7 +132,7 @@ CREATE TABLE cards (
     ord             integer not null,      /* 3 */  /* order */
     mod             integer not null,      /* 4 */  /* modification time (seconds since epoch) */
     usn             integer not null,      /* 5 */
-    type            integer not null,      /* 6 */  /* MODEL_STD | MODEL_CLOZE */
+    type            integer not null,      /* 6 */  /* 0=new, 1=learning, 2=due */
     queue           integer not null,      /* 7 */  /* -1 if self.suspend else 0 */
     due             integer not null,      /* 8 */  /* 0 */
     ivl             integer not null,      /* 9 */  /* 0 */
@@ -265,6 +297,21 @@ const defaultTemplate = {
   bafmt: "",
 }
 
+const defaultDeck = {
+  newToday: [0, 0], // currentDay, count
+  revToday: [0, 0],
+  lrnToday: [0, 0],
+  timeToday: [0, 0], // time in ms
+  conf: 1,
+  usn: 0,
+  desc: "",
+  dyn: 0,  // anki uses int/bool interchangably here
+  collapsed: false,
+  // added in beta11
+  extendNew: 10,
+  extendRev: 50,
+}
+
 class Package {
   constructor() {
     this.decks = []
@@ -293,7 +340,11 @@ class Package {
     const decks = {}
     this.decks.forEach(d => {
       d.notes.forEach(n => models[n.model.props.id] = n.model.props)
-      decks[d.id] = d
+      decks[d.id] = {
+        ...defaultDeck,
+        id: d.id,
+        name: d.name,
+      }
     })
 
     const col = {
@@ -311,7 +362,6 @@ class Package {
       dconf: JSON.stringify({1: {id: 1, ...defaultDeckConf}}),
       tags: JSON.stringify({}),
     }
-    console.log(col)
 
     db.exec(schema)
     db.prepare(`INSERT INTO col
@@ -344,7 +394,7 @@ class Package {
             ord: card_ord,
             mod: (+now/1000)|0,
             usn: -1,
-            type: MODEL_STD,
+            type: 0, // 0=new, 1=learning, 2=due 
             queue: 0, // -1 for suspended
           })
         }
