@@ -153,7 +153,7 @@ Add a note to this deck. Technically, it is possible for a single note in Anki
 to generate cards belonging to multiple decks, but mkanki does not support
 that.
 
-- `note` Note - create notes using [`model.note()`](#model-note-fieldvalues).
+- `note` Note - create notes using [`model.note()`](#modelnotefieldvalues).
 
 ### `Package`
 
