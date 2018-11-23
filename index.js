@@ -17,7 +17,6 @@
 const fs = require('fs')
 
 const tmp = require('tmp')
-const sqlite = require('sqlite3')
 const archiver = require('archiver')
 
 const ankiHash = require('./anki_hash')
