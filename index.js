@@ -36,12 +36,12 @@ class Model {
     this.props.flds.forEach(f => { this.fieldNameToOrd[f.name] = f.ord })
   }
 
-  note(fields) {
+  note(fields, guid = null) {
     if (Array.isArray(fields)) {
       if (fields.length !== this.props.flds.length) {
         throw new Error(`Expected ${this.props.flds.length} fields for model '${this.props.name}' but got ${fields.length}`)
       }
-      return new Note(this, fields)
+      return new Note(this, fields, guid)
     } else {
       const field_names = Object.keys(fields)
       const fields_list = []
@@ -50,7 +50,7 @@ class Model {
         if (ord == null) throw new Error(`Field '${field_name}' does not exist in the model`)
         fields_list[ord] = fields[field_name]
       })
-      return new Note(this, fields_list)
+      return new Note(this, fields_list, guid)
     }
   }
 }
@@ -145,13 +145,14 @@ class Deck {
 
 
 class Note {
-  constructor(model, fields) {
+  constructor(model, fields, guid = null) {
     this.model = model
     this.fields = fields
+    this._guid = guid
   }
 
   get guid() {
-    return ankiHash(this.fields)
+    return this._guid ? this._guid : ankiHash(this.fields);
   }
 
   get cards() {
