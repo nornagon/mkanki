@@ -36,12 +36,12 @@ class Model {
     this.props.flds.forEach(f => { this.fieldNameToOrd[f.name] = f.ord })
   }
 
-  note(fields, guid = null) {
+  note(fields, guid = null, tags = '') {
     if (Array.isArray(fields)) {
       if (fields.length !== this.props.flds.length) {
         throw new Error(`Expected ${this.props.flds.length} fields for model '${this.props.name}' but got ${fields.length}`)
       }
-      return new Note(this, fields, guid)
+      return new Note(this, fields, guid, tags)
     } else {
       const field_names = Object.keys(fields)
       const fields_list = []
@@ -50,7 +50,7 @@ class Model {
         if (ord == null) throw new Error(`Field '${field_name}' does not exist in the model`)
         fields_list[ord] = fields[field_name]
       })
-      return new Note(this, fields_list, guid)
+      return new Note(this, fields_list, guid, tags)
     }
   }
 }
@@ -145,10 +145,11 @@ class Deck {
 
 
 class Note {
-  constructor(model, fields, guid = null) {
+  constructor(model, fields, guid = null, tags = '') {
     this.model = model
     this.fields = fields
     this._guid = guid
+    this.tags = tags
   }
 
   get guid() {
@@ -187,7 +188,7 @@ class Note {
       for (const fname of matches) {
         if (!(fname in map)) continue
         const ord = map[fname][0]
-        const re = /{{c(\d+)::.+?}}/gs
+        const re = /\{\{c(\d+)::.+?\}\}/gs
         while (m = re.exec(this.fields[ord])) {
           const i = parseInt(m[1])
           if (i > 0)
@@ -321,7 +322,7 @@ class Package {
       media_info[i] = m.name
     })
     archive.append(JSON.stringify(media_info), { name: 'media' })
-    archive.finalize()
+    return archive.finalize()
   }
 
   write(db) {
@@ -373,7 +374,7 @@ class Package {
           mid: note.model.props.id,
           mod: (+now/1000)|0,
           usn: -1,
-          tags: '',
+          tags: note.tags,
           flds: note.fields.join('\x1f'),
           sfld: 0,
         })
