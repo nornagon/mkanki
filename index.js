@@ -311,7 +311,7 @@ class Package {
     this.write(db)
     db.close()
     const out = fs.createWriteStream(filename)
-    const archive = archiver('zip')
+    const archive = archiver('zip', { zlib: { level: 0 } })
     archive.pipe(out)
     archive.file(name, { name: 'collection.anki2' })
     const media_info = {}
