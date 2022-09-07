@@ -11,7 +11,7 @@
   "homepage": "https://github.com/nornagon/mkanki",
   "dependencies": {
     "archiver": "^3.0.0",
-    "better-sqlite3": "^5.0.1",
+    "better-sqlite3": "^7.6.2",
     "tmp": "0.0.33"
   }
 }
